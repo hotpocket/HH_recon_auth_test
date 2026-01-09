@@ -16,7 +16,7 @@ This project serves as a practical exploration of AWS authentication patterns, f
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Flutter App   │────│  AWS API Gateway │────│ Lambda Functions│
-│  (Multi-Platform)│    │   (JWT Auth)     │    │   (DynamoDB)    │
+│ (Multi-Platform)│    │   (JWT Auth)     │    │   (DynamoDB)    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
          │                        │                        │
          │              ┌──────────────────┐               │

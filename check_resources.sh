@@ -34,18 +34,18 @@ select_aws_profile() {
     fi
   fi
 
-  read -p "Select profile (0-$i): " selection
+  read -p "Select profile (0-${#profiles[@]}): " selection
 
   # Handle selection with validation
   if ! [[ "$selection" =~ ^[0-9]+$ ]]; then
-    #echo "Invalid input, using default"
+    echo "Invalid input, using default"
     AWS_PROFILE=""
   elif [ "$selection" -eq 0 ]; then
     AWS_PROFILE=""
-  elif [ "$selection" -ge 1 ] && [ "$selection" -lt "$i" ]; then
+  elif [ "$selection" -ge 1 ] && [ "$selection" -le "${#profiles[@]}" ]; then
     AWS_PROFILE="${profiles[$((selection-1))]}"
   else
-    #echo "Invalid selection, using default"
+    echo "Invalid selection, using default"
     AWS_PROFILE=""
   fi
 
@@ -58,7 +58,7 @@ select_aws_profile() {
   echo ""
 }
 
-# Prompt the user for a profile to run this script with
+# Call the function at the start
 select_aws_profile
 
 PROFILE_FLAG=""
@@ -70,6 +70,7 @@ fi
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 print_header() {
@@ -231,6 +232,78 @@ else
   echo "$LOG_GROUPS" | while read -r name bytes; do
     size_mb=$(echo "scale=2; ${bytes:-0} / 1048576" | bc 2>/dev/null || echo "0")
     echo "  • $name (${size_mb} MB)"
+  done
+fi
+
+###############################################################################
+# Billing Charges (Current + Last 3 Months)
+###############################################################################
+
+print_header "BILLING CHARGES - CURRENT + LAST 3 MONTHS"
+
+# Calculate date range (4 months total: current + last 3)
+start_date=$(date -d "3 months ago" +%Y-%m-01)
+end_date=$(date +%Y-%m-%d)
+
+# Check if Cost Explorer is enabled (suppress output)
+if ! aws ce get-cost-and-usage $PROFILE_FLAG --time-period Start="$start_date",End="$end_date" --granularity MONTHLY --metrics BlendedCost --query 'ResultsByTime[*]' --output text &>/dev/null; then
+  echo -e "${RED}  Unable to retrieve billing data.${NC}"
+  echo "  Cost Explorer may not be enabled or you may lack permissions."
+  echo "  Enable it at: https://console.aws.amazon.com/cost-management/home"
+else
+  # Get billing data for the entire period
+  billing_data=$(aws ce get-cost-and-usage $PROFILE_FLAG \
+    --time-period Start="$start_date",End="$end_date" \
+    --granularity MONTHLY \
+    --metrics BlendedCost \
+    --query 'ResultsByTime[*].[TimePeriod.Start,Total.BlendedCost.Amount]' \
+    --output text 2>/dev/null)
+
+  if [ -z "$billing_data" ]; then
+    echo "  No billing data available"
+  else
+    # Store in array and print in reverse (most recent first)
+    mapfile -t billing_lines <<< "$billing_data"
+    for ((idx=${#billing_lines[@]}-1; idx>=0; idx--)); do
+      read -r period_start cost <<< "${billing_lines[idx]}"
+      month_name=$(date -d "$period_start" +%B)
+
+      # Check if this is the current month
+      current_month_start=$(date +%Y-%m-01)
+      if [ "$period_start" = "$current_month_start" ]; then
+        month_name="$month_name (current)"
+      fi
+
+      printf "  %-20s \$%.2f\n" "$month_name:" "$cost"
+    done
+  fi
+fi
+
+###############################################################################
+# Billing Alerts
+###############################################################################
+
+print_header "BILLING ALERTS"
+
+# Check CloudWatch billing alarms
+print_subheader "CloudWatch Billing Alarms:"
+BILLING_ALARMS=$(aws cloudwatch describe-alarms $PROFILE_FLAG --alarm-name-prefix "Billing" --query 'MetricAlarms[*].[AlarmName,StateValue,Threshold]' --output text 2>/dev/null)
+if [ -z "$BILLING_ALARMS" ]; then
+  echo "  No billing alarms found"
+else
+  echo "$BILLING_ALARMS" | while read -r name state threshold; do
+    printf "  • %s\n    State: %s | Threshold: \$%.2f\n" "$name" "$state" "$threshold"
+  done
+fi
+
+# Check AWS Budgets
+print_subheader "AWS Budgets:"
+BUDGETS=$(aws budgets describe-budgets $PROFILE_FLAG --account-id "$ACCOUNT_ID" --query 'Budgets[*].[BudgetName,BudgetLimit.Amount,CalculatedSpend.ActualSpend.Amount,BudgetLimit.TimeUnit]' --output text 2>/dev/null)
+if [ -z "$BUDGETS" ]; then
+  echo "  No budgets found"
+else
+  echo "$BUDGETS" | while read -r name limit actual unit; do
+    printf "  • %s\n    Limit: \$%.2f | Actual: \$%.2f | Unit: %s\n" "$name" "$limit" "$actual" "$unit"
   done
 fi
 

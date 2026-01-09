@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Authentication Callback</title>
+</head>
+<body>
+    <p>Authenticating... Please wait.</p>
+    <script>
+        // Get the full callback URL with the authorization code
+        const callbackUrl = window.location.href;
+
+        // Try multiple methods to communicate back
+        function sendCallback() {
+            // Method 1: window.opener (popup flow)
+            if (window.opener) {
+                window.opener.postMessage({
+                    'flutter-web-auth-2': callbackUrl
+                }, window.location.origin);
+                window.close();
+                return;
+            }
+
+            // Method 2: Broadcast channel (same-origin tabs)
+            if ('BroadcastChannel' in window) {
+                const bc = new BroadcastChannel('flutter_web_auth_2');
+                bc.postMessage({
+                    'flutter-web-auth-2': callbackUrl
+                });
+                bc.close();
+            }
+
+            // Method 3: localStorage event (fallback)
+            localStorage.setItem('flutter_web_auth_2_callback', callbackUrl);
+            localStorage.removeItem('flutter_web_auth_2_callback');
+
+            // Close this tab/window after a short delay
+            setTimeout(() => {
+                document.body.innerHTML = '<p>Authentication complete. You can close this tab.</p>';
+            }, 500);
+        }
+
+        sendCallback();
+    </script>
+</body>
+</html>

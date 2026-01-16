@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ScanApp extends StatefulWidget {
   const ScanApp({super.key});
@@ -16,7 +17,37 @@ class _ScanAppState extends State<ScanApp> {
   @override
   void initState() {
     super.initState();
-    _initializeBluetooth();
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    setState(() {
+      _status = 'Requesting permissions...';
+    });
+
+    // Request Bluetooth permissions
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ].request();
+
+    // Check if all permissions are granted
+    bool allGranted = true;
+    statuses.forEach((permission, status) {
+      if (!status.isGranted) {
+        allGranted = false;
+      }
+    });
+
+    if (allGranted) {
+      _initializeBluetooth();
+    } else {
+      setState(() {
+        _status =
+            'Permissions denied. Please grant Bluetooth and Location permissions in Settings.';
+      });
+    }
   }
 
   Future<void> _initializeBluetooth() async {
@@ -46,7 +77,9 @@ class _ScanAppState extends State<ScanApp> {
   }
 
   void _startScan() {
-    if (!_bluetoothEnabled) return;
+    if (!_bluetoothEnabled) {
+      return;
+    }
 
     setState(() {
       _isScanning = true;
@@ -65,6 +98,9 @@ class _ScanAppState extends State<ScanApp> {
         setState(() {
           _devices.clear();
           _devices.addAll(results);
+          if (results.isNotEmpty) {
+            _status = 'Found ${results.length} device(s)';
+          }
         });
       }
     });
@@ -77,6 +113,8 @@ class _ScanAppState extends State<ScanApp> {
           if (!isScanning && _devices.isEmpty) {
             _status =
                 'No devices found. Make sure Bluetooth is enabled and devices are in range.';
+          } else if (!isScanning && _devices.isNotEmpty) {
+            _status = 'Scan completed. Found ${_devices.length} device(s).';
           }
         });
       }

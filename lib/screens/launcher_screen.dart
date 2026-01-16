@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
 import 'auth_screen.dart';
 import 'bluetooth_test.dart';
 
@@ -66,12 +67,67 @@ class LauncherScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ScanApp(),
-                        ),
-                      );
+                      // Check if running on a native platform (iOS, Android, Linux, macOS, Windows)
+                      try {
+                        // Platform.isXxx throws on web, so we use it to detect native platforms
+                        if (Platform.isAndroid ||
+                            Platform.isIOS ||
+                            Platform.isLinux ||
+                            Platform.isMacOS ||
+                            Platform.isWindows) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ScanApp(),
+                            ),
+                          );
+                        } else {
+                          // Should not reach here, but fallback to dialog
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title:
+                                    const Text('Bluetooth Test Not Available'),
+                                content: const Text(
+                                  'The Bluetooth test only works in a native environment (Linux, Android, iOS, Mac, Windows). '
+                                  'Please run this app natively to test Bluetooth functionality.',
+                                ),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        }
+                      } catch (e) {
+                        // Platform throws on web, so we show the dialog
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text('Bluetooth Test Not Available'),
+                              content: const Text(
+                                'The Bluetooth test only works in a native environment (Linux, Android, iOS, Mac, Windows). '
+                                'Please run this app natively to test Bluetooth functionality.',
+                              ),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      }
                     },
                     icon: const Icon(Icons.bluetooth),
                     label: const Text(

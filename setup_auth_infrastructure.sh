@@ -616,7 +616,7 @@ log_success "Configuration saved to $OUTPUT_FILE"
 # STEP 16: Generate Flutter config.dart
 ###############################################################################
 
-FLUTTER_CONFIG_FILE="flutter_config.dart"
+FLUTTER_CONFIG_FILE="lib/config.dart"
 
 cat > $FLUTTER_CONFIG_FILE << EOF
 class AuthConfig {
@@ -664,8 +664,7 @@ echo "1. Update Google OAuth Console:"
 echo "   - Authorized JavaScript origins: https://$COGNITO_DOMAIN"
 echo "   - Authorized redirect URIs: https://$COGNITO_DOMAIN/oauth2/idpresponse"
 echo ""
-echo "2. Copy $FLUTTER_CONFIG_FILE to your Flutter project:"
-echo "   cp $FLUTTER_CONFIG_FILE lib/config.dart"
+echo "2. Flutter config has been generated to $FLUTTER_CONFIG_FILE"
 echo ""
 echo "3. Run your Flutter app:"
 echo "   flutter run -d chrome --web-port=8080"

@@ -33,30 +33,55 @@ This project serves as a practical exploration of AWS authentication patterns, f
 - Google OAuth credentials (Client ID & Secret)
 - Node.js (for Lambda functions)
 
-### 1. Infrastructure Setup
+### ⚠️ Important: Configuration Setup Required
 
-#### Option A: Full Automated Setup
+This repository uses auto-generated configuration files that contain sensitive AWS credentials. **Do not commit** `lib/config.dart` to version control.
+
+### 1. Get Google OAuth Credentials
+
+Before running the setup script, you need to create a Google OAuth 2.0 client:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new OAuth 2.0 Client ID (Web application)
+3. Note your **Client ID** and **Client Secret**
+4. You'll need to update these in the setup script
+
+### 2. Configure and Run Setup Script
+
+The setup script will create all necessary AWS infrastructure and generate your configuration file:
+
 ```bash
-# Configure your settings in the script first
+# Edit the setup script to add your Google OAuth credentials
+nano setup_auth_infrastructure.sh
+
+# Update these lines with your actual values:
+# GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+# GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Run the setup script
+chmod +x setup_auth_infrastructure.sh
 ./setup_auth_infrastructure.sh
 ```
 
-#### Option B: Step-by-Step Setup
-```bash
-# Set up just the API components
-./setup_api.sh
+The script will:
+- Create AWS Cognito User Pool with Google Identity Provider
+- Set up API Gateway with JWT authorization
+- Create Lambda functions for API handling and pre-token generation
+- Create DynamoDB table for user data
+- **Generate `lib/config.dart` with your AWS credentials**
 
-# Set up pre-token generation Lambda
-./setup_pretokengen.sh
+### 3. Update Google OAuth Console
+
+After the setup script completes, you'll see output like:
+```
+Cognito Domain: https://myapp-auth-1234567890.auth.us-east-1.amazoncognito.com
 ```
 
-### 2. Configure Google OAuth
-
-After running setup scripts, update your Google OAuth Console:
+Update your Google OAuth Console with:
 - **Authorized JavaScript origins**: `https://[your-cognito-domain].auth.[region].amazoncognito.com`
 - **Authorized redirect URIs**: `https://[your-cognito-domain].auth.[region].amazoncognito.com/oauth2/idpresponse`
 
-### 3. Run the Flutter App
+### 4. Run the Flutter App
 
 ```bash
 # Web (primary testing platform)
@@ -69,19 +94,53 @@ flutter run
 flutter run -d macos  # or windows/linux
 ```
 
+### 5. Test Authentication
+
+1. Click "Sign in with Google" in the app
+2. Complete the Google OAuth flow
+3. You should be redirected back to the app with your user information
+4. The app will make authenticated API calls to your AWS backend
+
+### Alternative: Manual Configuration
+
+If you prefer not to run the setup script, you can manually configure `lib/config.dart`:
+
+```bash
+# Copy the example template
+cp lib/config.dart.example lib/config.dart
+
+# Edit with your AWS credentials
+nano lib/config.dart
+```
+
+Fill in the values from your AWS Cognito and API Gateway setup.
+
+### Cleanup
+
+When you're done testing, clean up AWS resources to avoid charges:
+
+```bash
+./teardown_auth_infrastructure.sh
+```
+
+This will remove all AWS resources created by the setup script.
+
 ## 📁 Project Structure
 
 ```
 auth_test/
 ├── lib/                          # Flutter application
-│   ├── config.dart              # AWS configuration (auto-generated)
+│   ├── config.dart              # AWS configuration (auto-generated, DO NOT COMMIT)
+│   ├── config.dart.example      # Configuration template (safe to commit)
 │   ├── services/                # Platform-specific auth services
 │   │   ├── auth_service.dart    # Service factory
 │   │   ├── auth_service_web.dart    # Web implementation
 │   │   ├── auth_service_mobile.dart # Mobile implementation
 │   │   └── auth_service_stub.dart   # Fallback stub
 │   └── screens/
-│       └── auth_screen.dart     # Main authentication UI
+│       ├── auth_screen.dart     # Main authentication UI
+│       ├── launcher_screen.dart # App launcher
+│       └── bluetooth_test.dart # Bluetooth testing
 ├── scripts/                     # Infrastructure management
 │   ├── setup_auth_infrastructure.sh    # Full setup (15 steps)
 │   ├── setup_api.sh                    # API-only setup
@@ -224,6 +283,7 @@ curl -v https://[api-endpoint]/health
 - **CORS Configuration**: Restricted to specific origins
 - **Least Privilege IAM**: Minimal AWS permissions
 - **Secure Token Storage**: Platform-specific secure storage
+- **No Secrets in Repo**: Configuration files are auto-generated and gitignored
 
 ## 💰 Cost Considerations
 
@@ -249,9 +309,13 @@ curl -v https://[api-endpoint]/health
 
 ## 📝 Configuration Files
 
-### Auto-generated Files
+### Auto-generated Files (DO NOT COMMIT)
+- `lib/config.dart`: Flutter app configuration with AWS credentials
 - `auth_config_output.json`: Complete AWS resource configuration
-- `flutter_config.dart`: Flutter app configuration (copy to `lib/config.dart`)
+- `flutter_config.dart`: Generated by setup script (copy to `lib/config.dart`)
+
+### Template Files (SAFE TO COMMIT)
+- `lib/config.dart.example`: Configuration template with placeholders
 
 ### Manual Configuration
 - Update `lib/config.dart` with your specific values
@@ -277,6 +341,10 @@ curl -v https://[api-endpoint]/health
 **"Google OAuth redirect mismatch"**
 - Update Google OAuth console with correct redirect URLs
 - Ensure Cognito domain matches configuration
+
+**"lib/config.dart not found"**
+- Run `./setup_auth_infrastructure.sh` to generate the file
+- Or copy `lib/config.dart.example` to `lib/config.dart` and fill in values manually
 
 ## 🤝 Contributing
 

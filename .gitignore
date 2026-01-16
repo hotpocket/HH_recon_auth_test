@@ -12,6 +12,28 @@
 .swiftpm/
 migrate_working_dir/
 
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Generated configuration files with secrets
+lib/config.dart
+auth_config_output.json
+flutter_config.dart
+
+# Certificate and key files
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.der
+
+# Keep example files
+!.env.example
+!lib/config.dart.example
+
 # IntelliJ related
 *.iml
 *.ipr

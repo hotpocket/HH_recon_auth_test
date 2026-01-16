@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/auth_screen.dart';
+import 'screens/launcher_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
       ),
-      home: const AuthScreen(),
+      home: const LauncherScreen(),
     );
   }
 }
